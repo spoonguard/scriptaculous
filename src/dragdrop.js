@@ -803,7 +803,7 @@ var Sortable = {
     var droponOptions = Sortable.options(dropon.parentNode);
 
     if (droponOptions && droponOptions.animate) {
-      if (!(objects = Sortable._shouldHoverForAnimation(element, dropon, direction)))
+      if (!Sortable._shouldHoverForAnimation(element, dropon, direction))
         return;
     }
 
@@ -833,7 +833,7 @@ var Sortable = {
         else
           dropon.parentNode.insertBefore(element, dropon.nextSibling);
       }
-      }
+    }
 
     if (options && dropon.parentNode != parentNode)
       options.onChange(element, dropon);
@@ -999,9 +999,6 @@ var Sortable = {
 
   _animateEmpty: function(element, child, offset, options, children)
   {
-    var os = null;
-    var isLastChild = !child;
-
     if (!child)
       child = children[[0, children.length - 1].max()];
     
@@ -1009,7 +1006,7 @@ var Sortable = {
       return false;
 
     var overlap = (offset / Element.offsetSize(child, options.overlap));
-    var direction = (overlap < 0.5);
+    var direction = (overlap > 0.5);
 
     if (!Sortable._shouldHover(element, child, direction))
       return false;
@@ -1021,10 +1018,10 @@ var Sortable = {
       direction = false;
 
     if (direction) {
-      if (child.nextSibling != element)
+      if (child.previousSibling != element)
         Sortable._animate(element, child, direction, element);
     } else {
-      if (child.previousSibling != element || isLastChild)
+      if (child.nextSibling != element)
         Sortable._animate(element, child, direction, element);
     }
 
