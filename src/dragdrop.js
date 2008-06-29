@@ -41,6 +41,7 @@ var Droppables = {
     Element.makePositioned(element); // fix IE
     options.element = element;
 
+    Element.setDroppableIndex(element, this.drops.length);
     this.drops.push(options);
   },
   
@@ -102,7 +103,6 @@ var Droppables = {
     if(this.last_active && this.last_active != drop) this.deactivate(this.last_active);
     if (drop) {
       Position.within(drop.element, point[0], point[1]);
-
       if(drop.onHover)
         drop.onHover(element, drop.element, Position.overlap(drop.overlap, drop.element));
       
@@ -227,7 +227,6 @@ var Draggables = {
 /*--------------------------------------------------------------------------*/
 
 var Draggable = Class.create({
-
   initialize: function(element) {
     var defaults = {
       handle: false,
@@ -276,6 +275,11 @@ var Draggable = Class.create({
     if(!this.handle) this.handle = $(options.handle);
     if(!this.handle) this.handle = this.element;
     
+    if(options.scroll && !options.scroll.scrollTo && !options.scroll.outerHTML) {
+      options.scroll = $(options.scroll);
+      this._isScrollChild = Element.childOf(this.element, options.scroll);
+    }
+
     Element.makePositioned(this.element); // fix IE    
 
     this.options  = options;
@@ -301,7 +305,6 @@ var Draggable = Class.create({
   initDrag: function(event) {
     if(!Object.isUndefined(Draggable._dragging[this.element]) &&
       Draggable._dragging[this.element]) return;
-
     if(Event.isLeftClick(event)) {    
       // abort on form elements, fixes a Firefox issue
       var src = Event.element(event);
@@ -376,10 +379,11 @@ var Draggable = Class.create({
     }
     
     Draggables.notify('onDrag', this, event);
+    
     this.draw(pointer);
     if(this.options.change) this.options.change(this);
     
-    if (this.options.scroll) {
+    if(this.options.scroll) {
       this.stopScrolling();
       
       var p;
@@ -432,14 +436,11 @@ var Draggable = Class.create({
     Draggables.notify('onEnd', this, event);
 
     var revert = this.options.revert;
-
-    if(revert && Object.isFunction(revert))
-      revert = revert(this.element);
+    if(revert && Object.isFunction(revert)) revert = revert(this.element);
     
     var d = this.currentDelta();
     if(revert && this.options.reverteffect) {
       if (dropped == 0 || revert != 'failure') {
-        this.redraw();
         this.options.reverteffect(this.element,
           d[1]-this.delta[1], d[0]-this.delta[0]);
       }
@@ -501,10 +502,10 @@ var Draggable = Class.create({
       } else {
       if(Object.isArray(this.options.snap)) {
         p = p.map( function(v, i) {
-          return (v/this.options.snap[i]).round()*this.options.snap[i] }.bind(this))
+          return (v/this.options.snap[i]).round()*this.options.snap[i] }.bind(this));
       } else {
         p = p.map( function(v) {
-          return (v/this.options.snap).round()*this.options.snap }.bind(this))
+          return (v/this.options.snap).round()*this.options.snap }.bind(this));
       }
     }}
     
@@ -556,12 +557,11 @@ var Draggable = Class.create({
     if (this._isScrollChild) {
       Draggables._lastScrollPointer = Draggables._lastScrollPointer || $A(Draggables._lastPointer);
 
-      if (this.options.scroll.scrollLeft > 0) {
-      Draggables._lastScrollPointer[0] += this.scrollSpeed[0] * delta / 1000;
-      }
-      if (this.options.scroll.scrollTop > 0) {
-      Draggables._lastScrollPointer[1] += this.scrollSpeed[1] * delta / 1000;
-      }
+      if (this.options.scroll.scrollLeft > 0)
+        Draggables._lastScrollPointer[0] += this.scrollSpeed[0] * delta / 1000;
+
+      if (this.options.scroll.scrollTop > 0)
+        Draggables._lastScrollPointer[1] += this.scrollSpeed[1] * delta / 1000;
       
       this.draw(Draggables._lastScrollPointer);
     }
@@ -587,7 +587,7 @@ var Draggable = Class.create({
         H = documentElement.clientHeight;
       } else {
         W = body.offsetWidth;
-        H = body.offsetHeight
+        H = body.offsetHeight;
       }
     }
     return { top: T, left: L, width: W, height: H };
@@ -677,16 +677,15 @@ var Sortable = {
       
       onChange:    Prototype.emptyFunction,
       onUpdate:    Prototype.emptyFunction,
-      onReorder:   Prototype.emptyFunction,
       canInsert:   function() { return true; }
     }, arguments[1] || { });
 
     // clear any old sortable with same element
-    //this.destroy(element);
+    this.destroy(element);
 
     // build options for the draggables
     var options_for_draggable = {
-      revert:      this._cancelAnimations.bind(this),
+      revert:      Sortable._cancelAnimations,
       quiet:       options.quiet,
       scroll:      options.scroll,
       scrollSpeed: options.scrollSpeed,
@@ -695,7 +694,7 @@ var Sortable = {
       ghosting:    options.ghosting,
       constraint:  options.constraint,
       handle:      options.handle,
-      onEnd:       Sortable.onEnd
+      onStart:     Sortable.onStart
     };
 
     if(options.starteffect)
@@ -722,14 +721,14 @@ var Sortable = {
       tree:        options.tree,
       hoverclass:  options.hoverclass,
       onHover:     Sortable.onHover
-    }
+    };
     
     var options_for_tree = {
       onHover:      Sortable.onEmptyHover,
       overlap:      options.overlap,
       containment:  options.containment,
       hoverclass:   options.hoverclass
-    }
+    };
 
     // fix for gecko engine
     Element.cleanWhitespace(element); 
@@ -769,7 +768,6 @@ var Sortable = {
 
     // for animation
     this._activeAnimations = $H({});
-    this._animationSavedStyle = null;
     
     // for onupdate
     Draggables.addObserver(new SortableObserver(element, options.onUpdate));
@@ -788,38 +786,18 @@ var Sortable = {
     );
   },
 
-  onEnd: function(draggable) {
-    var elt = draggable.element;
-    var root = Sortable._findRootElement(elt);
-    var options = Sortable.options(root);
-    
-    var eltsOrder = (
-      options.elements || Sortable.findElements(root, options) || []
-    ).reject(function(e) {
-      return (e.getStyle('visibility') == 'hidden');
-    });
-
-    var indexOrder = eltsOrder.map(function(e) {
-      return Element.getOriginalIndex(e);
-    });
-
-    var idOrder = eltsOrder.map(function(e) { return e.id; });
-
-    if (options)
-      options.onReorder(draggable.element, eltsOrder, idOrder, indexOrder);
-
-    return;
+  onStart: function(draggable, ev) {
+    Sortable.lastDraggable = draggable;
+    return true;
   },
 
   onHover: function(element, dropon, overlap) {
     if(Element.isParent(dropon, element)) return;
 
-    var objects;
-    var direction = (overlap > 0.5);
-
     if (!Sortable._shouldHover(element, dropon))
       return;
 
+    var direction = (overlap > 0.5);
     var parentNode = element.parentNode;
     var options = Sortable.options(parentNode);
     var droponOptions = Sortable.options(dropon.parentNode);
@@ -839,7 +817,7 @@ var Sortable = {
         Element.swapComputedIndices(element, dropon);
 
         if (droponOptions && droponOptions.animate)
-          Sortable._animate(element, dropon, objects, true, element);
+          Sortable._animate(element, dropon, true, element);
         else
           dropon.parentNode.insertBefore(element, dropon);
       }
@@ -851,7 +829,7 @@ var Sortable = {
         Element.swapComputedIndices(element, dropon);
 
         if (droponOptions && droponOptions.animate)
-          Sortable._animate(element, dropon, objects, false, element);
+          Sortable._animate(element, dropon, false, element);
         else
           dropon.parentNode.insertBefore(element, dropon.nextSibling);
       }
@@ -866,63 +844,35 @@ var Sortable = {
     return;
   },
 
-  _findObjectsForAnimation: function(element, dropon)
+  _absolutizeForAnimation: function(element)
   {
-    /* Asymptotic complexity is O(n):
-        Scales with the number of active draggables and droppables;
-        if performance becomes problematic, this is a likely culprit. */
+    if (element.style.position == 'absolute')
+      return;
 
-    var draggable = null;
-    var ei = null, ej = null, di = null, dj = null;
-    var options = Sortable.options(dropon || element); /* Fix Me */
-
-    if (options) {
-      var droppables = options.droppables;
-      var draggables = options.draggables;
-
-      /* Find (offset of) draggable for $element, $dropon */
-      for (var i = 0, len = draggables.length; i < len; i++) {
-        var d = draggables[i];
-        if (d.element == element) { draggable = d; ei = i; }
-        else if (d.element == dropon) { di = i; }
-      };
-
-      /* Find offset of droppable for $element, $dropon */
-      for (var j = 0, len = droppables.length; j < len; j++) {
-        if (droppables[j] == element) { ej = j; }
-        else if (droppables[j] == dropon) { dj = j; }
-      };
-    }
-
-    return {
-      draggable: draggable,
-      element: { draggable_index: ei, droppable_index: ej },
-      dropon: { draggable_index: di, droppable_index: dj }
-    };
+    element.absolutize();
+    element._originalMargin  = element.style.margin;
+    element._originalPadding = element.style.padding;
+    element.style.margin = 0;
+    element.style.padding = 0;
   },
-  
-  _cancelAnimations: function(element /* = null */, dropon /* = null */,
-                              objects /* = null */, animate /* = null */,
-                              style /* = null */)
+
+  _relativizeForAnimation: function(element)
   {
-    if (element && !objects)
-      objects = this._findObjectsForAnimation(element, dropon);
+    if (element.style.position != 'absolute')
+      return;
 
-    if (element) {
-      if (!style) {
-        style = $H(this._animationSavedStyle);
-        this._animationSavedStyle = null;
-      }
+    element.relativize();
+    element.style.margin = element._originalMargin;
+    element.style.padding = element._originalPadding;
+  },
 
-      style.each(function(kv) {
-        element.style[kv.key] = kv.value;
-      });
+  _cancelAnimations: function(element /* = null */,
+                              dropon /* = null */, animate /* = null */)
+  {
+    if (element)
+      Sortable._relativizeForAnimation(element);
 
-      if (objects.draggable)
-        objects.draggable.redraw();
-
-      element.style.position = 'relative';
-    }
+    Sortable.lastDraggable.redraw();
 
     Sortable._activeAnimations.each(function(kv) {
       kv.value.effect.cancel();
@@ -944,31 +894,15 @@ var Sortable = {
         }
       }
       
-      if (objects.draggable)
-        objects.draggable.redraw();
-
       Sortable._activeAnimations.unset(kv.key);
     });
 
-    return this;
+    Sortable.lastDraggable.redraw();
+    return true;
   },
 
-  _animate: function(element, dropon, objects, direction)
+  _animate: function(element, dropon, direction)
   {
-    /* Save appropriate styles from $element:
-        These are restored in _cancelAnimations. */
-
-    var savedStyle = $H({
-      width: element.style.width, height: element.style.height
-    });
-
-    /* Save style for $element on first call:
-        This is used to guarantee that $element's original CSS style
-        is restored on release, rather than a style modified by this code. */
-
-    if (!this._animationSavedStyle)
-      this._animationSavedStyle = savedStyle;
-
     /* Clone $element:
         This produces the two invisible blind-up / blind-down elements,
         which together push $element to produce a "sliding" effect. */
@@ -980,9 +914,8 @@ var Sortable = {
     eltUp.style.height = extents.height + 'px';
 
     eltUp.setStyle({
-      position: 'relative',
-      padding: 0, margin: 0,
-      top: 0, left: 0, visibility: 'hidden'
+      top: 0, left: 0, visibility: 'hidden',
+      position: 'relative', padding: 0, margin: 0
     });
 
     var eltDown = eltUp.cloneNode(false);
@@ -1001,11 +934,11 @@ var Sortable = {
 
     if (Sortable._activeAnimations.size() <= 0)
       p.parentNode.insertBefore(eltUp, e1);
-    
-    element.absolutize();
+
+    Sortable._absolutizeForAnimation(element);
     dropon.parentNode.insertBefore(element, e2);
     dropon.parentNode.insertBefore(eltDown, e2);
-    Sortable._cancelAnimations(null, dropon, objects, true, savedStyle);
+    Sortable._cancelAnimations(null, dropon, true);
 
     var droponOptions = Sortable.options(dropon.parentNode);
 
@@ -1015,7 +948,7 @@ var Sortable = {
         droponOptions.duration
     });
 
-    Sortable._activeAnimations.set(objects.dropon.droppable_index, {
+    Sortable._activeAnimations.set(Element.getDroppableIndex(dropon), {
       direction: direction, effect: effect
     });
 
@@ -1051,19 +984,17 @@ var Sortable = {
 
   _shouldHoverForAnimation: function(element, dropon, direction)
   {
-    var objects = Sortable._findObjectsForAnimation(element, dropon);
-
     if (dropon.getStyle('visibility') == 'hidden')
       return false;
 
     var animation = Sortable._activeAnimations.get(
-      objects.dropon.droppable_index
+      Element.getDroppableIndex(dropon)
     );
 
     if (animation && (direction == null || animation.direction == direction))
       return false;
 
-    return objects;
+    return true;
   },
 
   _animateEmpty: function(element, child, offset, options, children)
@@ -1083,7 +1014,7 @@ var Sortable = {
     if (!Sortable._shouldHover(element, child, direction))
       return false;
 
-    if (!(os = Sortable._shouldHoverForAnimation(element, child, direction)))
+    if (!Sortable._shouldHoverForAnimation(element, child, direction))
       return false;
 
     if (isLastChild)
@@ -1091,10 +1022,10 @@ var Sortable = {
 
     if (direction) {
       if (child.nextSibling != element)
-        Sortable._animate(element, child, os, direction, element);
+        Sortable._animate(element, child, direction, element);
     } else {
       if (child.previousSibling != element || isLastChild)
-        Sortable._animate(element, child, os, direction, element);
+        Sortable._animate(element, child, direction, element);
     }
 
     return true;
@@ -1182,11 +1113,11 @@ var Sortable = {
         children: [],
         position: parent.children.length,
         container: $(children[i]).down(options.treeTag)
-      }
+      };
       
       /* Get the element containing the children and recurse over it */
       if (child.container)
-        this._tree(child.container, options, child)
+        this._tree(child.container, options, child);
       
       parent.children.push (child);
     }
@@ -1211,7 +1142,7 @@ var Sortable = {
       children: [],
       container: element,
       position: 0
-    }
+    };
     
     return Sortable._tree(element, options, root);
   },
@@ -1297,6 +1228,16 @@ Element.findChildren = function(element, only, recursive, tagName) {
   });
 
   return (elements.length>0 ? elements.flatten() : []);
+}
+
+
+Element.getDroppableIndex = function (element) {
+  return element['_droppableIndex'];
+}
+
+Element.setDroppableIndex = function (element, i) {
+  element['_droppableIndex'] = i;
+  return element;
 }
 
 Element.getOriginalIndex = function (element) {

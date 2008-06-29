@@ -117,6 +117,7 @@
 <script type="text/javascript" charset="utf-8">
   function initializePreselected(){
     Sortable.create('sortable_elements_handles',{
+      animate: true,
       handle: 'handle',
       handles: ['h_1','h_2','h_3','h_4','h_5','h_6','h_7','h_8','h_9','h_10'],
       elements: ['s_1','s_2','s_3','s_4','s_5','s_6','s_7','s_8','s_9','s_10']
@@ -124,7 +125,7 @@
   }
   function initializeNormal(){
     Sortable.create('sortable_elements_handles',{
-      handle: 'handle'
+      animate: true, handle: 'handle'
     });
   }
   function benchmark(method,times){
