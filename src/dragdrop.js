@@ -1066,9 +1066,6 @@ var Sortable = {
     if (!Sortable._shouldHoverForAnimation(element, child, direction))
       return false;
 
-    if (isLastChild)
-      direction = false;
-
     if (direction) {
       if (child.previousSibling != insertElement)
         Sortable._animate(element, child, direction, insertElement);
