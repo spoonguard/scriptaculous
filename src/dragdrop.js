@@ -731,9 +731,6 @@ var Sortable = {
       canInsert:   function() { return true; }
     }, arguments[1] || { });
 
-    // clear any old sortable with same element
-    this.destroy(element);
-
     // build options for the draggables
     var options_for_draggable = {
       revert:      Sortable._cancelAnimations,
@@ -841,7 +838,7 @@ var Sortable = {
 
   onStart: function(draggable, ev) {
     Sortable.lastDraggable = draggable;
-    return true;
+    return;
   },
 
   onEnd: function(draggable) {
