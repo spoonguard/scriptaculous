@@ -727,6 +727,7 @@ var Sortable = {
       
       onChange:    Prototype.emptyFunction,
       onUpdate:    Prototype.emptyFunction,
+      onReorder:   Prototype.emptyFunction,
       canInsert:   function() { return true; }
     }, arguments[1] || { });
 
@@ -745,7 +746,8 @@ var Sortable = {
       constraint:  options.constraint,
       reparent:    options.reparent,
       handle:      options.handle,
-      onStart:     Sortable.onStart
+      onStart:     Sortable.onStart,
+      onEnd:       Sortable.onEnd
     };
 
     if(options.starteffect)
@@ -842,6 +844,29 @@ var Sortable = {
     return true;
   },
 
+  onEnd: function(draggable) {
+    var elt = draggable.element;
+    var root = Sortable._findRootElement(elt);
+    var options = Sortable.options(root);
+    
+    var eltsOrder = (
+      options.elements || Sortable.findElements(root, options) || []
+    ).reject(function(e) {
+      return (e.getStyle('visibility') == 'hidden');
+    });
+
+    var indexOrder = eltsOrder.map(function(e) {
+      return Element.getOriginalIndex(e);
+    });
+
+    var idOrder = eltsOrder.map(function(e) { return e.id; });
+
+    if (options)
+      options.onReorder(draggable.element, eltsOrder, idOrder, indexOrder);
+
+    return;
+  },
+ 
   onHover: function(element, dropon, overlap, insertElement) {
     if(Element.isParent(dropon, element)) return;
 
@@ -1335,4 +1360,5 @@ Element.swapComputedIndices = function (e1, e2) {
 Element.offsetSize = function (element, type) {
   return element['offset' + ((type=='vertical' || type=='height') ? 'Height' : 'Width')];
 }
+
 
