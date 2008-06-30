@@ -5,8 +5,9 @@
   <script src="../../lib/prototype.js" type="text/javascript"></script>
   <script src="../../src/scriptaculous.js" type="text/javascript"></script>
   <style type="text/css" media="screen">
-    #thelist li { background: green; margin:5px; padding: 30px; }
-    #thelist2 li { background: #ffb; margin:2px; padding: 2px; }
+    #thelist li { background: green; margin:5px; padding: 30px; width:auto; }
+    #thelist2 li, #thelist3 li { background: #ffb; margin:2px; padding: 2px; width:auto; }
+    li { width: 400px; }
   </style>
 </head>
 <body>
@@ -16,6 +17,67 @@
 
 <h2>Draggables/Droppables</h2>
 
+<div id="reparent">
+<div style="width:400px;height:400px;overflow:scroll;" id="scroll-container-mod2">
+
+<ul id="thelist3" style="padding: 2px; background:red;">
+<li>Relatively here!</li>
+<li><input onclick="this.checked = !this.checked" name="y" id="y" type="checkbox"/>one</li>
+<li>one</li>
+<li>one</li>
+<li>one</li>
+<li>one</li>
+<li>one</li>
+<li>one</li>
+<li>one</li>
+<li>one</li>
+<li>one</li>
+<li>one</li>
+<li>one</li>
+<li>one</li>
+<li>one</li>
+<li>one</li>
+<li>one</li>
+<li>one</li>
+<li>one</li>
+<li>one</li>
+<li>one</li>
+<li>one</li>
+<li>one</li>
+<li>one</li>
+<li>one</li>
+<li>one</li>
+<li>one</li>
+<li>one</li>
+<li>one</li>
+<li>one</li>
+<li>one</li>
+<li>one</li>
+<li>one</li>
+<li>one</li>
+<li>one</li>
+<li>one</li>
+<li>one</li>
+<li>one</li>
+<li>one</li>
+<li>one</li>
+<li>one</li>
+<li>one</li>
+<li>one</li>
+<li>one</li>
+<li>one</li>
+<li>one</li>
+<li>one</li>
+<li>one</li>
+<li>one</li>
+<li>one</li>
+<li>one</li>
+</ul>
+
+</div>
+</div>
+
+<h1>More space in between</h1>
 <div style="width:400px;height:400px;overflow:scroll;position:relative;" id="scroll-container">
 
 <ul id="thelist2" style="padding: 2px; background:red;">
@@ -132,6 +194,7 @@
 
 </div>
 
+
 <pre id="debug"></pre>
 
 <script type="text/javascript" language="javascript" charset="utf-8">
@@ -141,6 +204,7 @@ Position.includeScrollOffsets = true;
 
 Sortable.create('thelist2',{scroll:'scroll-container', animate:true});
 Sortable.create('thelist2-mod',{scroll:'scroll-container-mod', animate:true});
+Sortable.create('thelist3',{dropOnEmpty:true,constraint:false,reparent:'reparent',scroll:'scroll-container-mod', animate:true});
 
 // ]]>
 </script>
